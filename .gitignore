@@ -4,6 +4,5 @@
 .tox/
 build/
 dist/
-github.mk
-python.mk
+extras/makefiles/
 venv/

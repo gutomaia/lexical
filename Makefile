@@ -1,57 +1,82 @@
+PLATFORM = $(shell uname)
+
 PROJECT_NAME=lexical
-PROJECT_TAG=lexical
+PROJECT_TAG?=lexical
+PUBLIC_PROJECT=true
+GITHUB_DOMAIN=github.com
+GITHUB_TOKEN?=must be present on your env.mk, create in github at setting/user developer/external token with repo scope
+GITHUB_PROJECT=gutomaia/lexical
+MAKEFILE_SCRIPT_PATH=extras/makefiles
+MAKERY_REPOSITORY=gutomaia/makery
+MAKERY_SCRIPT=gutonet.mk
+MAKERY_DEFAULT_TASK=default_makery
+MAKERY_BASE_URL=https://raw.githubusercontent.com/${MAKERY_REPOSITORY}/master
+
+PYTHON_VERSION?=3.11
 PYTHON_MODULES=lexical
 
-PYTHON_APP_SOURCES = ${shell find ${PYTHON_MODULES} -type f -iname '*.py' | grep -v ${PYTHON_MODULES}/tests }
-
 WGET=wget -q
-
-default: python.mk github.mk
-	@$(MAKE) -C . test
-
-ifeq "true" "${shell test -f python.mk && echo true}"
-include python.mk
+ifeq "true" "${PUBLIC_PROJECT}"
+GH_WGET=${WGET}
+else
+GH_WGET=${WGET} --header "Authorization: token ${GITHUB_TOKEN}"
 endif
 
-ifeq "true" "${shell test -f github.mk && echo true}"
-include github.mk
+ifeq "" "$(shell which wget)"
+WGET=curl -O -s -L -s
+ifeq "true" "${PUBLIC_PROJECT}"
+GH_WGET=${WGET}
+else
+GH_WGET=${WGET} -H "Authorization: token ${GITHUB_TOKEN}"
+endif
+endif
+
+OK=\033[32m[OK]\033[39m
+FAIL=\033[31m[FAIL]\033[39m
+CHECK=@if [ $$? -eq 0 ]; then echo "${OK}"; else echo "${FAIL}" ; fi
+
+
+ifeq "true" "${shell test -f ~/env.mk && echo true}"
+include ~/env.mk
+HASENV=true
 endif
 
 
-python.mk:
-	@${WGET} https://raw.githubusercontent.com/gutomaia/makery/master/python.mk && touch $@
+ifeq "true" "${shell test -f env.mk && echo true}"
+include env.mk
+HASENV=true
+endif
 
-github.mk:
-	@${WGET} https://raw.githubusercontent.com/gutomaia/makery/master/github.mk && touch $@
+ifneq "true" "${HASENV}"
+$(shell echo "# Generated file env.mk" > env.mk)
+$(shell echo "GITHUB_TOKEN=" > env.mk)
+endif
 
-dependencies: ${REQUIREMENTS}
+ifeq "" "${GITHUB_TOKEN}"
+default:
+	echo ${GITHUB_TOKEN} ${shell test -f ~/env.mk && echo true}
+	@echo "You must create a GITHUB_TOKEN var in your env.mk file"
+	@echo "Create a token with REPO permissions and set as GITHUB_TOKEN in your env.mk"
+	@echo "Go to https://github.com/settings/tokens (y/N)?" && read ans && [ $${ans:-N} = y ]
+	@open https://github.com/settings/tokens
+	@exit 1
+else
+default: ${MAKEFILE_SCRIPT_PATH}/${MAKERY_SCRIPT}
+	@$(MAKE) -C . ${MAKERY_DEFAULT_TASK}
+endif
 
-build: dependencies python_build
+ifeq "true" "${shell test -f ${MAKEFILE_SCRIPT_PATH}/${MAKERY_SCRIPT} && echo true}"
+include ${MAKEFILE_SCRIPT_PATH}/${MAKERY_SCRIPT}
+endif
 
-test: build ${REQUIREMENTS_TEST}
-	${VIRTUALENV} nosetests ${NOSETEST_ARGS} ${PYTHON_MODULES}
+${MAKEFILE_SCRIPT_PATH}/${MAKERY_SCRIPT}:
+	@echo "Download ${MAKERY_SCRIPT} at extras/makefiles: \c"
+	@mkdir -p ${MAKEFILE_SCRIPT_PATH} && \
+		cd ${MAKEFILE_SCRIPT_PATH} && \
+		${GH_WGET} ${MAKERY_BASE_URL}/${MAKERY_SCRIPT} && \
+		touch ${MAKERY_SCRIPT}
+	${CHECK}
 
-tdd: ${REQUIREMENTS_TEST}
-	@${eval export IGNORE=${shell ls -d */ | grep -v --regex "^${PYTHON_MODULES}/$$" | xargs echo | sed 's/\///g' | sed 's/ /,/g'}}
-	${VIRTUALENV} tdaemon --ignore-dirs="${IGNORE}" --custom-args="--with-notifyplugin --no-start-message --processes=4"
 
-tox: ${REQUIREMENTS_TEST}
-	${VIRTUALENV} tox
-
-dist: python_egg python_wheel
-
-clean: python_clean
-	@rm -rf build dist
-	@rm -rf plugins
-	@rm -rf .tox
-
-register:
-	${VIRTUALENV} python setup.py register -r pypi
-
-distribute: dist
-	${VIRTUALENV} python setup.py sdist bdist_wheel upload -r pypi
-
-purge: clean python_purge
-	@rm python.mk
-
-.PHONY: venv dependencies python_dependencies build run dist egg wheel docker clean
+run:
+	${VIRTUALENV} python ${PYTHON_MODULES}
