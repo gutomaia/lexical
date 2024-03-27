@@ -7,14 +7,13 @@ from tempfile import NamedTemporaryFile
 
 
 class CodeLineGeneratorTest(TestCase):
-
     @skip('TODO')
     def test_unicode(self):
-        code = u'; Something\nCPY #$11'
+        code = '; Something\nCPY #$11'
         gen = code_line_generator(code)
         self.assertIsInstance(gen, GeneratorType)
-        self.assertEqual(u'; Something\n', next(gen))
-        self.assertEqual(u'CPY #$11', next(gen))
+        self.assertEqual('; Something\n', next(gen))
+        self.assertEqual('CPY #$11', next(gen))
         with self.assertRaises(StopIteration):
             next(gen)
 
@@ -31,8 +30,8 @@ class CodeLineGeneratorTest(TestCase):
 
     @skip('TODO')
     def test_real_file(self):
-        with NamedTemporaryFile(mode="r+") as f:
-            f.write("; this\nADC #$0A\n;test\n\n")
+        with NamedTemporaryFile(mode='r+') as f:
+            f.write('; this\nADC #$0A\n;test\n\n')
             f.seek(0)
             gen = code_line_generator(f)
             self.assertEqual('; this\n', next(gen))
