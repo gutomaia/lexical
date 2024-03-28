@@ -1,4 +1,3 @@
-from __future__ import unicode_literals
 from re import match
 import re
 from io import StringIO, BytesIO
