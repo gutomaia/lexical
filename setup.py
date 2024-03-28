@@ -1,11 +1,6 @@
-import os
-
 from setuptools import setup, find_packages
+from lexical import __version__ as VERSION
 
-here = os.path.abspath(os.path.dirname(__file__))
-
-with open(os.path.join(here, 'VERSION.txt')) as f:
-    VERSION = f.read().strip()
 
 setup(name='lexical',
       version=VERSION,

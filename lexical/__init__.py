@@ -4,6 +4,10 @@ from io import StringIO, BytesIO
 import sys
 
 
+__version__ = '0.0.5'
+__prog__ = 'lexical'
+
+
 class UnknownToken(Exception):
     """Unknown token error when trying to tokenize a single line"""
 
